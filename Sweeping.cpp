@@ -36,7 +36,7 @@ bool State::checkVertexEvent(ArcRef arc, double sweepLineY)
     std::cout << "adding vertex event on arc: " << arc << "; lowest y: " << lp.y << ", sweepline y: " << sweepLineY << ".\n";
 
     int eventIndex = events.size();
-    events.push_back(Event::Vertex(arc, lp.y));
+    events.push_back(Event::Vertex(arc->site, lp.y));
     arcEvents[arc->id] = eventIndex;
     eventQueue.insert({ static_cast<int>(round(lp.y)), eventIndex });
 
@@ -167,12 +167,6 @@ bool State::step()
             voronoiVertices.push_back(cc.origin);
 
             std::cout << "collapsing arc " << arc << " and adding voronoi vertex at(" << cc.origin.x << ", " << cc.origin.y << ").\n";
-
-            //int segmentId = segments.size();
-            //segments.push_back(Segment{ cc.origin });
-
-            //prev->s2 = segmentId;
-            //next->s1 = segmentId;
 
             createSegments(prev, next, cc.origin);
 

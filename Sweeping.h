@@ -69,8 +69,8 @@ struct Event {
     static constexpr int SITE = 0;
     static constexpr int VERTEX = 1;
 
-    static Event Vertex(ArcRef arc, double y) {
-        return Event{ .type = VERTEX, .y = y, .site = arc->site, .active = true };
+    static Event Vertex(int site, double y) {
+        return Event{ .type = VERTEX, .y = y, .site = site, .active = true };
     }
 
     static Event Site(int site, double y) {
@@ -192,77 +192,5 @@ inline Point parabolaIntersect(Point siteAbove, Point newSite) {
 inline double distSqr(const Point& a, const Point& b) {
     return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 }
-
-
-
-
-
-
-
-
-//struct SitePair
-//{
-//    int a;
-//    int b;
-//
-//    SitePair() = default;
-//    SitePair(int a, int b) : a{ a }, b{ b } {}
-//    SitePair(const SitePair& other) : a{ other.a }, b{ other.b } {}
-//
-//    bool operator==(const auto& other) const noexcept {
-//        return a == other.a && b == other.b;
-//    }
-//
-//    struct hash {
-//        size_t operator()(const SitePair& usp) const noexcept {
-//            return (usp.a) ^ (usp.b << 1);
-//        }
-//    };
-//};
-//
-//struct SiteTriplet
-//{
-//    int a;
-//    int b;
-//    int c;
-//
-//    SiteTriplet() = default;
-//    SiteTriplet(int a, int b, int c) : a{ a }, b{ b }, c{ c } {}
-//    SiteTriplet(const SiteTriplet& other) : a{ other.a }, b{ other.b }, c{ other.c } {}
-//
-//    bool operator==(const auto& other) const noexcept {
-//        int me[]{ a, b, c };
-//        int others[]{ other.a, other.b, other.c };
-//
-//        std::sort(me, me + 3);
-//        std::sort(others, others + 3);
-//        return me[0] == others[0] && me[1] == others[1] && me[2] == others[2];
-//    }
-//
-//    struct hash {
-//        size_t operator()(const SiteTriplet& usp) const noexcept {
-//            int me[]{ usp.a, usp.b, usp.c };
-//            std::sort(me, me + 3);
-//            return (((me[0]) ^ (me[1] << 1)) >> 1) ^ (me[2] << 1);
-//        }
-//    };
-//};
-
-
-//inline int findSiteIndexAbove(std::vector<SiteArc>& beachline, Point p) {
-//
-//    if (beachline.size() == 0) return -1;
-//
-//    auto bps = breakpoints(beachline, p.y);
-//
-//    for (int i = 0; i < bps.size(); i++) {
-//        if (p.x < bps[i].location.x) {
-//            return i;
-//        }
-//    }
-//
-//    return beachline.size() - 1;
-//}
-
 
 } // namespace tora::sim::fortune
