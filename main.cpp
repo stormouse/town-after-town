@@ -262,7 +262,7 @@ struct SweepingTest {
         auto siteCloseToMouseId = -1;
 
         for (const auto& site : algorithm.sites) {
-            if (tora::sim::fortune::distSqr(site.location, mousePoint) < 9) {
+            if (tora::geometry::distSqr(site.location, mousePoint) < 9) {
                 siteCloseToMouseId = site.id;
             }
         }
@@ -395,8 +395,172 @@ struct SweepingTest {
     static SweepingTest reset(const SweepingTest& old) {
         return SweepingTest{ old.algorithm.sites };
     }
-
 };
+
+struct DivisionTest {
+    tora::sim::fortune::State algorithm;
+    std::vector<tora::geometry::Polygon> polygons;
+
+    DivisionTest(const std::vector<tora::sim::fortune::Site>& sites) : algorithm{ sites } {
+        algorithm.run();
+        auto voronoiPolygons = algorithm.getPolygons();
+        for (const auto& p : voronoiPolygons) {
+            polygons.push_back(tora::geometry::offset(p, 10.0));
+        }
+    }
+
+    void renderPolygon(sf::RenderWindow& window, const auto& polygon, sf::Color lineColor) {
+        for (int i = 0; i < polygon.vertices.size(); i++) {
+            auto v1 = polygon.vertices[i];
+            auto v2 = polygon.vertices[(i + 1) % polygon.vertices.size()];
+            sf::Vertex line[2];
+            line[0].position = sf::Vector2f(v1.x, v1.y);
+            line[0].color = lineColor;
+            line[1].position = sf::Vector2f(v2.x, v2.y);
+            line[1].color = lineColor;
+            window.draw(line, 2, sf::Lines);
+        }
+    }
+
+    void render(sf::RenderWindow& window) {
+        auto mouse = sf::Mouse::getPosition(window);
+        auto mousePoint = tora::geometry::Point(mouse.x, mouse.y);
+        auto siteCloseToMouseId = -1;
+
+        for (const auto& site : algorithm.sites) {
+            auto v = sf::CircleShape(3);
+            v.setPosition(site.location.x - 3, site.location.y - 3);
+            v.setFillColor(sf::Color::White);
+            window.draw(v);
+        }
+
+        for (const auto& polygon : polygons) {
+            if (polygon.contains(mousePoint)) {
+                // renderPolygon(window, polygon, sf::Color::Green);
+            }
+            else {
+                renderPolygon(window, polygon, sf::Color::White);
+            }
+        }
+
+        for (const auto& polygon : polygons) {
+            if (polygon.contains(mousePoint)) {
+                renderPolygon(window, polygon, sf::Color::Green);
+            }
+            else {
+                // renderPolygon(window, polygon, sf::Color::White);
+            }
+        }
+    }
+
+    static DivisionTest create(int numSites) {
+
+        std::vector<tora::sim::fortune::Site> sites;
+        auto random = tora::Random();
+
+        for (int i = 0; i < numSites; i++) {
+            double x = random.getRandomBetween<double>(150, 650);
+            double y = random.getRandomBetween<double>(150, 650);
+            sites.push_back(tora::sim::fortune::Site{
+                .id = i,
+                .location = tora::sim::fortune::Point(x, y),
+                });
+        }
+
+        // draw boundary circle
+        const double pi = 3.14159265;
+        int numSides = 12;
+        double step = 2 * pi / numSides;
+        double radius = 650;
+        sf::Vector2 origin(400, 400);
+        double theta = 0;
+        for (int i = 0; i < numSides; i++, theta += step) {
+            double x = cos(theta) * radius + origin.x;
+            double y = sin(theta) * radius + origin.y;
+            sites.push_back(tora::sim::fortune::Site{
+                .id = 0,
+                .location = tora::sim::fortune::Point(x, y)
+                });
+        }
+
+        std::sort(sites.begin(), sites.end(), [](const auto& a, const auto& b) {
+            return a.location.y < b.location.y;
+            });
+
+        for (int i = 0; i < sites.size(); i++) {
+            sites[i].id = i;
+        }
+
+        return DivisionTest{ sites };
+    }
+};
+
+
+struct PolygonShrinkTest {
+    tora::geometry::Polygon original;
+    tora::geometry::Polygon transformed;
+    int numSegmentsToRender = 0;
+
+    void renderPolygon(sf::RenderWindow& window, const auto& polygon, sf::Color lineColor, int limit, bool showVerts) {
+        for (int i = 0; i < std::min(limit, (int)polygon.vertices.size()); i++) {
+            auto v1 = polygon.vertices[i];
+            auto v2 = polygon.vertices[(i + 1) % polygon.vertices.size()];
+
+            sf::Vertex line[2];
+            line[0].position = sf::Vector2f(v1.x, v1.y);
+            line[0].color = lineColor;
+            line[1].position = sf::Vector2f(v2.x, v2.y);
+            line[1].color = lineColor;
+            window.draw(line, 2, sf::Lines);
+
+            if (showVerts) {
+                auto vert1 = sf::CircleShape(2);
+                vert1.setPosition(v1.x - 2, v1.y - 2);
+                vert1.setFillColor(lineColor);
+                window.draw(vert1);
+
+                auto vert2 = sf::CircleShape(2);
+                vert2.setPosition(v2.x - 2, v2.y - 2);
+                vert2.setFillColor(lineColor);
+                window.draw(vert2);
+            }
+        }
+    }
+
+    void render(sf::RenderWindow& window) {
+        auto mouse = sf::Mouse::getPosition(window);
+        auto mousePoint = tora::geometry::Point(mouse.x, mouse.y);
+
+        renderPolygon(window, original, sf::Color::White, original.vertices.size(), false);
+        renderPolygon(window, transformed, sf::Color::Green, numSegmentsToRender, true);
+    }
+
+    void reset() {
+        numSegmentsToRender = 0;
+    }
+
+    static PolygonShrinkTest create(int verts) {
+        PolygonShrinkTest pst;
+
+        // draw boundary circle
+        const double pi = 3.14159265;
+        int numSides = verts;
+        double step = -2 * pi / numSides;
+        double radius = 250;
+        sf::Vector2 origin(400, 400);
+        double theta = 0;
+        for (int i = 0; i < numSides; i++, theta += step) {
+            double x = cos(theta) * radius + origin.x;
+            double y = sin(theta) * radius + origin.y;
+            pst.original.vertices.push_back(tora::geometry::Point(x, y));
+        }
+
+        pst.transformed = tora::geometry::offset(pst.original, 75.0);
+
+        return pst;
+    }
+};
+
 
 int main(int argc, char** argv) {
     sf::RenderWindow window(sf::VideoMode(800, 800), "SFML works!");
@@ -410,13 +574,15 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    CircumcircleTest ct = CircumcircleTest::create();
-    ParabolaTest pt = ParabolaTest::create();
-    BreakpointTest bt = BreakpointTest::create();
-    BeachlineTest blt = BeachlineTest::create(8);
-    GenerateSitesTest gt = GenerateSitesTest::create(8);
-    SweepingTest st = SweepingTest::create(16);
-    // st.algorithm.run();
+    //CircumcircleTest ct = CircumcircleTest::create();
+    //ParabolaTest pt = ParabolaTest::create();
+    //BreakpointTest bt = BreakpointTest::create();
+    //BeachlineTest blt = BeachlineTest::create(8);
+    //GenerateSitesTest gt = GenerateSitesTest::create(8);
+    //SweepingTest st = SweepingTest::create(16);
+    //st.algorithm.run();
+    // DivisionTest dt = DivisionTest::create(16);
+    PolygonShrinkTest pst = PolygonShrinkTest::create(4);
 
     while (window.isOpen())
     {
@@ -440,31 +606,36 @@ int main(int argc, char** argv) {
                     // bt = BreakpointTest::create();
                     // blt = BeachlineTest::create(8);
                     // gt = GenerateSitesTest::create(8);
-                    st = SweepingTest::create(16);
+                    // st = SweepingTest::create(16);
                     // st.algorithm.run();
+                    // dt = DivisionTest::create(16);
+
+                    pst = PolygonShrinkTest::create(4);
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
                 {
-                    st = SweepingTest::reset(st);
+                    // st = SweepingTest::reset(st);
+                    pst.reset();
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::N))
                 {
-                    st.step();
+                    // st.step();
+                    pst.numSegmentsToRender++;
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
                 {
-                    st.algorithm.save("savedstate.txt");
+                    // st.algorithm.save("savedstate.txt");
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
                 {
-                    auto savedState = tora::sim::fortune::State::load("savedstate.txt");
-                    if (savedState.has_value()) {
-                        st = SweepingTest{ savedState.value().sites };
-                    }
+                    //auto savedState = tora::sim::fortune::State::load("savedstate.txt");
+                    //if (savedState.has_value()) {
+                    //    st = SweepingTest{ savedState.value().sites };
+                    //}
                 }
             }
         }
@@ -476,7 +647,9 @@ int main(int argc, char** argv) {
         // bt.render(window);
         // blt.render(window);
         // gt.render(window);
-        st.render(window, font);
+        // st.render(window, font);
+        // dt.render(window);
+        pst.render(window);
 
         // map.render(window);
         window.display();

@@ -3,17 +3,13 @@
 #include <unordered_map>
 #include <vector>
 
-namespace tora::sim::voronoi {
+#include "Geometry.h"
+
+namespace tora::geometry {
 
 struct Site
 {
     int id;
-};
-
-struct Vertex
-{
-    double x;
-    double y;
 };
 
 struct Edge
@@ -25,10 +21,9 @@ struct Edge
 class Voronoi
 {
     std::vector<Site> sites;
-    std::vector<Vertex> vertices;
+    std::vector<Point> vertices;
     std::vector<Edge> edges;
     std::unordered_map<int, std::vector<Edge>> siteEdges;
 };
 
-
-} // namespace tora::sim::voronoi
+} // namespace tora::geometry

@@ -5,7 +5,6 @@
 
 namespace tora::sim::fortune {
 
-
 std::ostream& operator<<(std::ostream& os, const ArcRef& ar) {
     os << ar->id << "(" << std::prev(ar)->site << "," << ar->site << "," << std::next(ar)->site << ")";
     return os;
@@ -198,7 +197,6 @@ bool State::step()
     return progress;
 }
 
-
 void State::run()
 {
     while (step());
@@ -246,6 +244,77 @@ std::optional<State> State::load(const std::string& filename) {
 
     inFile.close();
     return State{ sites };
+}
+
+
+// note this function destroys the list in argument
+bool toPolygon(std::list<Segment>& segments, Polygon& outPolygon) {
+    outPolygon.vertices.clear();
+
+    int n = segments.size();
+    auto seg = segments.begin();
+    Point p = seg->b;
+    seg = segments.erase(seg);
+
+    outPolygon.vertices.push_back(p);
+    for (int i = 0; i < n - 1; i++) {
+        for (auto it = segments.begin(); it != segments.end(); it++) {
+            if (geometry::pointEq(it->a, p, 0.1)) {
+                p = it->b;
+                segments.erase(it);
+                break;
+            }
+            else if (geometry::pointEq(it->b, p, 0.1)) {
+                p = it->a;
+                segments.erase(it);
+                break;
+            }
+        }
+        outPolygon.vertices.push_back(p);
+    }
+
+    if (!segments.empty()) {
+        //std::cerr << "error: " << segments.size() << " segments not connected.\n";
+        //std::cerr << "connected points: ";
+        //for (int i = 0; i < outPolygon.vertices.size(); i++) {
+        //    std::cerr << "(" << outPolygon.vertices[i].x << ", " << outPolygon.vertices[i].y << ") ";
+        //}
+        //std::cerr << "\nunconnected points: ";
+        //for (const auto& s : segments) {
+        //    std::cerr << "(" << s.a.x << ", " << s.a.y << ")-" << "(" << s.b.x << ", " << s.b.y << ") ";
+        //}
+        //std::cerr << std::endl;
+        //outPolygon.vertices.clear();
+
+        return false;
+    }
+
+    if (geometry::windingDirection(outPolygon) < 0) {
+        std::reverse(outPolygon.vertices.begin(), outPolygon.vertices.end());
+    }
+
+    return true;
+}
+
+std::vector<geometry::Polygon> State::getPolygons() const
+{
+    std::unordered_map<int, std::list<Segment>> siteSegments;
+    for (const auto& segment : segments) {
+        if (segment.finished) {
+            siteSegments[segment.site1].push_back(segment);
+            siteSegments[segment.site2].push_back(segment);
+        }
+    }
+
+    std::vector<geometry::Polygon> result;
+    for (auto& [_, segments] : siteSegments) {
+        Polygon p;
+        if (segments.size() > 2 && toPolygon(segments, p)) {
+            result.push_back(p);
+        }
+    }
+
+    return result;
 }
 
 } // namespace tora::sim::fortune

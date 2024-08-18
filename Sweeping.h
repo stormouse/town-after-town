@@ -8,21 +8,11 @@
 #include <optional>
 #include <iostream>
 
+#include "Geometry.h"
+
 namespace tora::sim::fortune {
 
-struct Point
-{
-    double x;
-    double y;
-    Point() = default;
-    Point(double x, double y) : x{ x }, y{ y } {}
-};
-
-struct Circle
-{
-    Point origin;
-    double radius;
-};
+using namespace tora::geometry;
 
 struct Site
 {
@@ -106,6 +96,8 @@ struct State
     void clearVertexEvent(ArcRef arc);
     int createSegments(ArcRef a, ArcRef b, Point s);
 
+    std::vector<geometry::Polygon> getPolygons() const;
+
     void save(const std::string& filename);
     static std::optional<State> load(const std::string& filename);
 };
@@ -187,10 +179,6 @@ inline Point parabolaIntersect(Point siteAbove, Point newSite) {
     auto y0 = siteAbove.y;
 
     return Point(x, (y0 + y) * 0.5 - (x - x0) * (x - x0) / (2 * (y - y0)));
-}
-
-inline double distSqr(const Point& a, const Point& b) {
-    return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 }
 
 } // namespace tora::sim::fortune
