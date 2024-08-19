@@ -274,18 +274,6 @@ bool toPolygon(std::list<Segment>& segments, Polygon& outPolygon) {
     }
 
     if (!segments.empty()) {
-        //std::cerr << "error: " << segments.size() << " segments not connected.\n";
-        //std::cerr << "connected points: ";
-        //for (int i = 0; i < outPolygon.vertices.size(); i++) {
-        //    std::cerr << "(" << outPolygon.vertices[i].x << ", " << outPolygon.vertices[i].y << ") ";
-        //}
-        //std::cerr << "\nunconnected points: ";
-        //for (const auto& s : segments) {
-        //    std::cerr << "(" << s.a.x << ", " << s.a.y << ")-" << "(" << s.b.x << ", " << s.b.y << ") ";
-        //}
-        //std::cerr << std::endl;
-        //outPolygon.vertices.clear();
-
         return false;
     }
 

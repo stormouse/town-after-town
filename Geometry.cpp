@@ -62,7 +62,7 @@ Polygon tora::geometry::offset(const Polygon& polygon, double amount)
     // create intersection points
     {
         int vid = static_cast<int>(vertices.size());
-        std::cout << "vid: " << vid << "\n";
+        // std::cout << "vid: " << vid << "\n";
 
         // key: starting vertex of a segment
         // value: list of intersection points
@@ -72,24 +72,30 @@ Polygon tora::geometry::offset(const Polygon& polygon, double amount)
         auto v1 = vertices.begin();
         while (v1 != vertices.end()) {
             auto v2 = std::next(v1);
-            if (v2 == vertices.end()) {
+            if (v2 == vertices.end())
                 v2 = vertices.begin();
-            }
-            auto s1 = Segment(v1->p, v2->p);
-            auto v3 = v2;
+
+            Segment s1{ .v1 = v1->p, .v2 = v2->p };
+
+            auto v3 = std::next(v2);
+
             while (v3 != vertices.end()) {
                 auto v4 = std::next(v3);
-                if (v4 == vertices.end()) {
-                    v4 = vertices.begin();
-                }
 
-                auto s2 = Segment(v3->p, v4->p);
+                if (v4 == vertices.end())
+                    v4 = vertices.begin();
+                
+                if (v4 == v1) break;
+
+                Segment s2{ .v1 = v3->p, .v2 = v4->p };
+
                 Point intersection;
                 if (intersect(s1, s2, intersection)) {
                     auto nv = NamedVertex{ .name = vid++, .p = intersection };
                     segmentIntersections[v1->name].push_back(nv);
-                    segmentIntersections[v2->name].push_back(nv);
+                    segmentIntersections[v3->name].push_back(nv);
                 }
+
                 v3++;
             }
             v1++;
@@ -102,10 +108,15 @@ Polygon tora::geometry::offset(const Polygon& polygon, double amount)
             auto it = segmentIntersections.find(v->name);
             if (it != segmentIntersections.end()) {
                 auto& intersections = it->second;
-                std::sort(intersections.begin(), intersections.end(), [&v](const auto& a, const auto& b) {
-                    return dot(a.p - v->p, v->p) < dot(b.p - v->p, v->p);
+                auto& np = next == vertices.end() ? vertices.begin()->p : next->p;
+                std::sort(intersections.begin(), intersections.end(), [&](const auto& a, const auto& b) {
+                    return dot(a.p - v->p, np - v->p) < dot(b.p - v->p, np - v->p);
                     });
-                v = vertices.insert(next, intersections.begin(), intersections.end());
+
+                // std::cout << "adding ";
+                for (const auto& intc : intersections) std::cout << "(" << intc.p.x << ", " << intc.p.y << ") ";
+                // std::cout << "between " << "(" << v->p.x << ", " << v->p.y << ") and (" << next->p.x << ", " << next->p.y << ")\n";
+                vertices.insert(next, intersections.begin(), intersections.end());
                 v = next;
             }
             else {
@@ -121,34 +132,53 @@ Polygon tora::geometry::offset(const Polygon& polygon, double amount)
     {
         std::unordered_set<int> visited;
 
-        std::cout << "Walking vertices: ";
+        // vertices.insert(vertices.end(), *vertices.begin()); // close the path as a loop
 
-        auto v = vertices.begin();
-        while (v != vertices.end()) {
-            if (visited.find(v->name) != visited.end()) {
-                std::cout << v->name << " ";
-                v++;
-                continue;
-            }
+        int steps = vertices.size() * 2;
+        auto nodeMap = std::unordered_map<int, std::list<NamedVertex>::iterator>();
+        auto current = vertices.begin();
 
-            Polygon loop;
-            auto start = v;
-            do {
-                loop.vertices.push_back(v->p);
-                visited.insert(v->name);
-                std::cout << v->name << " ";
-                v++;
-                if (v == vertices.end()) {
-                    v = vertices.begin();
+        // std::cout << "Walking vertices:\n";
+        for (int step = 0; step < steps; step++) {
+           //  std::cout << "    " << current->name << "(" << current->p.x << ", " << current->p.y << ")\n";
+            if (nodeMap.contains(current->name)) {
+                // Loop detected: start node is nodeMap[current->name] and end node is current
+                // std::cout << "    loop!\n";
+                Polygon loop;
+                for (auto it = nodeMap[current->name]; it != current; it = std::next(it) == vertices.end() ? vertices.begin() : std::next(it)) {
+                    // std::cout << "        " << it->name << "(" << it->p.x << ", " << it->p.y << ")\n";
+                    loop.vertices.push_back(it->p);
                 }
-            } while (v != start);
-
-            if (windingDirection(loop) == originalWinding) {
-                result.vertices.insert(result.vertices.end(), loop.vertices.begin(), loop.vertices.end());
+                if (windingDirection(loop) != originalWinding) {
+                    // std::cout << "        " << "dropped!\n";
+                    for (int i = 0; i < loop.vertices.size(); i++) {
+                        auto t = current;
+                        if (current == vertices.begin()) {
+                            current = std::prev(vertices.end());
+                        }
+                        else {
+                            current--;
+                        }
+                        vertices.erase(t);
+                    }
+                } else {
+                    // std::cout << "        " << "kept!\n";
+                }
+                nodeMap.clear();
             }
+            else {
+                // Mark this node as visited
+                nodeMap[current->name] = current;
+            }
+            current = std::next(current);
+            if (current == vertices.end()) current = vertices.begin();
         }
+        // std::cout << std::endl;
 
-        std::cout << std::endl;
+        auto& path = result.vertices;
+        for (auto& vertex : vertices) {
+            path.push_back(vertex.p);
+        }
     }
 
     return result;
@@ -160,7 +190,7 @@ int windingDirection(const Polygon& polygon)
     for (int i = 0; i < polygon.vertices.size(); i++) {
         auto& p1 = polygon.vertices[i];
         auto& p2 = polygon.vertices[(i + 1) % polygon.vertices.size()];
-        sum += (p2.x - p1.x) * (p2.y + p1.y);
+        sum += (p1.x * p2.y - p2.x * p1.y);
     }
     return sum > 0 ? 1 : -1;
 }

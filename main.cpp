@@ -405,7 +405,7 @@ struct DivisionTest {
         algorithm.run();
         auto voronoiPolygons = algorithm.getPolygons();
         for (const auto& p : voronoiPolygons) {
-            polygons.push_back(tora::geometry::offset(p, 10.0));
+            polygons.push_back(tora::geometry::offset(p, -8.0));
         }
     }
 
@@ -527,16 +527,33 @@ struct PolygonShrinkTest {
         }
     }
 
-    void render(sf::RenderWindow& window) {
+    void render(sf::RenderWindow& window, sf::Font& font) {
         auto mouse = sf::Mouse::getPosition(window);
         auto mousePoint = tora::geometry::Point(mouse.x, mouse.y);
 
         renderPolygon(window, original, sf::Color::White, original.vertices.size(), false);
         renderPolygon(window, transformed, sf::Color::Green, numSegmentsToRender, true);
+
+        // Debug: draw cursor position
+        auto text = sf::Text();
+        text.setFont(font);
+        text.setFillColor(sf::Color::White);
+        text.setCharacterSize(16);
+        text.setString(sf::String(std::to_string(mousePoint.x) + "," + std::to_string(mousePoint.y)));
+        text.setPosition(sf::Vector2f(mousePoint.x + 15.0, mousePoint.y + 10.0));
+        window.draw(text);
     }
 
     void reset() {
         numSegmentsToRender = 0;
+    }
+
+    void step() {
+        numSegmentsToRender++;
+        int lastIndex = std::min(numSegmentsToRender, (int)transformed.vertices.size()) - 1;
+        int nextIndex = (lastIndex + 1) % transformed.vertices.size();
+        std::cout << "(" << transformed.vertices[lastIndex].x << ", " << transformed.vertices[lastIndex].y << "), ("
+            << transformed.vertices[nextIndex].x << ", " << transformed.vertices[nextIndex].y << ")\n";
     }
 
     static PolygonShrinkTest create(int verts) {
@@ -581,8 +598,8 @@ int main(int argc, char** argv) {
     //GenerateSitesTest gt = GenerateSitesTest::create(8);
     //SweepingTest st = SweepingTest::create(16);
     //st.algorithm.run();
-    // DivisionTest dt = DivisionTest::create(16);
-    PolygonShrinkTest pst = PolygonShrinkTest::create(4);
+    DivisionTest dt = DivisionTest::create(16);
+    PolygonShrinkTest pst = PolygonShrinkTest::create(7);
 
     while (window.isOpen())
     {
@@ -608,21 +625,21 @@ int main(int argc, char** argv) {
                     // gt = GenerateSitesTest::create(8);
                     // st = SweepingTest::create(16);
                     // st.algorithm.run();
-                    // dt = DivisionTest::create(16);
+                    dt = DivisionTest::create(16);
 
-                    pst = PolygonShrinkTest::create(4);
+                    // pst = PolygonShrinkTest::create(7);
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
                 {
                     // st = SweepingTest::reset(st);
-                    pst.reset();
+                    // pst.reset();
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::N))
                 {
                     // st.step();
-                    pst.numSegmentsToRender++;
+                    // pst.step();
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
@@ -648,8 +665,8 @@ int main(int argc, char** argv) {
         // blt.render(window);
         // gt.render(window);
         // st.render(window, font);
-        // dt.render(window);
-        pst.render(window);
+        dt.render(window);
+        // pst.render(window, font);
 
         // map.render(window);
         window.display();
