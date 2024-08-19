@@ -114,7 +114,7 @@ Polygon tora::geometry::offset(const Polygon& polygon, double amount)
                     });
 
                 // std::cout << "adding ";
-                for (const auto& intc : intersections) std::cout << "(" << intc.p.x << ", " << intc.p.y << ") ";
+                // for (const auto& intc : intersections) std::cout << "(" << intc.p.x << ", " << intc.p.y << ") ";
                 // std::cout << "between " << "(" << v->p.x << ", " << v->p.y << ") and (" << next->p.x << ", " << next->p.y << ")\n";
                 vertices.insert(next, intersections.begin(), intersections.end());
                 v = next;
